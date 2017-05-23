@@ -44,7 +44,9 @@ public class GameServer extends Thread {
     protected boolean isRaceStarted;
     protected int numberOfLaps;
     private boolean allConfirmedStart;
-
+    
+    private final Object lockUserList = new Object();
+            
     public GameServer() {
         numberOfLaps = Integer.parseInt(JOptionPane
                 .showInputDialog(null, "Please enter number of laps"));
@@ -188,43 +190,47 @@ public class GameServer extends Thread {
 
     private boolean addConnection(PlayerMP player, Packet00Login packet) {
         boolean alreadyConnected = false;
-        for (PlayerMP p : this.connectedPlayers) {
-            if (player.getUsername().equalsIgnoreCase(p.getUsername())) {
-                alreadyConnected = true;
-                break;
-            }
-        }
-        if (!alreadyConnected) {
-            Packet21ConfirmLogin confirmLoginPacket =
-                    new Packet21ConfirmLogin();
-            sendData(confirmLoginPacket.getData(), player.ipAddress, player.port);
+        synchronized(lockUserList) {
             for (PlayerMP p : this.connectedPlayers) {
-                // relay to the current connected player that there is a new
-                // player
-                sendData(packet.getData(), p.ipAddress, p.port);
-
-                // relay to the new player that the currently connected player
-                // exists
-                Packet00Login tmpPacket = new Packet00Login(p.getUsername(), p.getX(), p.getY());
-                sendData(tmpPacket.getData(), player.ipAddress, player.port);
+                if (player.getUsername().equalsIgnoreCase(p.getUsername())) {
+                    alreadyConnected = true;
+                    break;
+                }
             }
-            connectedPlayers.add(player);
-            raceTimes.add(0.);
-            return true;
-        }
-        else {
-            Packet21ConfirmLogin confirmLoginPacket =
-                    new Packet21ConfirmLogin();
-            sendData(confirmLoginPacket.getData(), player.ipAddress, player.port);
-            return false;
+            if (!alreadyConnected) {
+                Packet21ConfirmLogin confirmLoginPacket =
+                        new Packet21ConfirmLogin();
+                sendData(confirmLoginPacket.getData(), player.ipAddress, player.port);
+                for (PlayerMP p : this.connectedPlayers) {
+                    // relay to the current connected player that there is a new
+                    // player
+                    sendData(packet.getData(), p.ipAddress, p.port);
+
+                    // relay to the new player that the currently connected player
+                    // exists
+                    Packet00Login tmpPacket = new Packet00Login(p.getUsername(), p.getX(), p.getY());
+                    sendData(tmpPacket.getData(), player.ipAddress, player.port);
+                }
+                connectedPlayers.add(player);
+                raceTimes.add(0.);
+                return true;
+            }
+            else {
+                Packet21ConfirmLogin confirmLoginPacket =
+                        new Packet21ConfirmLogin();
+                sendData(confirmLoginPacket.getData(), player.ipAddress, player.port);
+                return false;
+            }
         }
     }
 
     private void removeConnection(Packet01Disconnect packet) {
-        int index = getPlayerMPIndex(packet.getUsername());
-        this.connectedPlayers.remove(index);
-        this.raceTimes.remove(index);
-        packet.writeData(this);
+        synchronized(lockUserList) {
+            int index = getPlayerMPIndex(packet.getUsername());
+            this.connectedPlayers.remove(index);
+            this.raceTimes.remove(index);
+            packet.writeData(this);
+        }
     }
 
     public PlayerMP getPlayerMP(String username) {
@@ -236,7 +242,7 @@ public class GameServer extends Thread {
         return null;
     }
 
-    public synchronized int getPlayerMPIndex(String username) {
+    public int getPlayerMPIndex(String username) {
         int index = 0;
         for (PlayerMP player : this.connectedPlayers) {
             if (player.getUsername().equals(username)) {
@@ -247,12 +253,14 @@ public class GameServer extends Thread {
         return index;
     }
 
-    public synchronized void sendData(byte[] data, InetAddress ipAddress, int port) {
-        DatagramPacket packet = new DatagramPacket(data, data.length, ipAddress, port);
-        try {
-            this.socket.send(packet);
-        } catch (IOException e) {
-            System.err.println(e.getMessage());
+    public void sendData(byte[] data, InetAddress ipAddress, int port) {
+        synchronized(this) {
+            DatagramPacket packet = new DatagramPacket(data, data.length, ipAddress, port);
+            try {
+                this.socket.send(packet);
+            } catch (IOException e) {
+                System.err.println(e.getMessage());
+            }
         }
     }
 
@@ -306,29 +314,33 @@ public class GameServer extends Thread {
         bombPoints.add(new Point(doubleToInt(bombX), doubleToInt(bombY)));   
     }
     
-    protected synchronized void removeOilPoint(Packet07RemoveOil packet) {
-        int x = packet.getPoint().x;
-        int y = packet.getPoint().y;
-        for(Point oilPoint : oilPoints) {
-            if(oilPoint.x == x && oilPoint.y == y) {
-                oilPoints.remove(oilPoint);
-                return;
+    protected void removeOilPoint(Packet07RemoveOil packet) {
+        synchronized(this) {
+            int x = packet.getPoint().x;
+            int y = packet.getPoint().y;
+            for(Point oilPoint : oilPoints) {
+                if(oilPoint.x == x && oilPoint.y == y) {
+                    oilPoints.remove(oilPoint);
+                    return;
+                }
             }
         }
     }
     
-    protected synchronized void removeBombPoint(Packet10RemoveBomb packet) {
-        int x = packet.getPoint().x;
-        int y = packet.getPoint().y;
-        for(Point bombPoint : bombPoints) {
-            if(bombPoint.x == x && bombPoint.y == y) {
-                bombPoints.remove(bombPoint);
-                return;
+    protected void removeBombPoint(Packet10RemoveBomb packet) {
+        synchronized (this) {
+            int x = packet.getPoint().x;
+            int y = packet.getPoint().y;
+            for(Point bombPoint : bombPoints) {
+                if(bombPoint.x == x && bombPoint.y == y) {
+                    bombPoints.remove(bombPoint);
+                    return;
+                }
             }
         }
     }
     
-    protected synchronized boolean canUseBonusPoint(Packet12UseBonusPoint packet) {
+    protected boolean canUseBonusPoint(Packet12UseBonusPoint packet) {
         Point point = packet.getPoint();
         int index = 0;
         for(BonusPoint bonusPoint : bonusPoints) {
@@ -339,11 +351,13 @@ public class GameServer extends Thread {
         }
         if(index == bonusPoints.size())
             return false;
-        if(bonusPoints.get(index).isActive() == false)
-            return false;
-        System.out.println(this.bonusPoints.get(index).getBonus());
-        this.bonusPoints.get(index).setUnactive();
-        return true;
+        synchronized(this) {
+            if(bonusPoints.get(index).isActive() == false)
+                return false;
+            System.out.println(this.bonusPoints.get(index).getBonus());
+            this.bonusPoints.get(index).setUnactive();
+            return true;
+        }
     }
     
     private void manageBonusPoints() throws InterruptedException {
