@@ -1,0 +1,10 @@
+kolejne linie oznaczaj¹ pozycjê startow¹:
+x
+y
+angle
+nastêpnie 5 checkpointów
+czy linia pozioma (x), czy pionowa (y), a nastêpnie 
+	dla x: dwa koordynaty x oraz jeden y
+	dla y: jeden koordynat x oraz dwa y
+teraz liczba punktów z bonusami
+	dla ka¿dego z nich x i y w linii
