@@ -561,19 +561,25 @@ public class Racing extends JPanel implements ActionListener {
         player.setFreezeTime(freezeTime);
     }
     
-    public synchronized void setOil(List<Point> oilPoints) {
-        this.oilPoints.clear();
-        this.oilPoints.addAll(oilPoints);
+    public void setOil(List<Point> oilPoints) {
+        synchronized(this) {
+            this.oilPoints.clear();
+            this.oilPoints.addAll(oilPoints);
+        }
     }
     
-    public synchronized void setBomb(List<Point> bombPoints) {
-        this.bombPoints.clear();
-        this.bombPoints.addAll(bombPoints);
+    public void setBomb(List<Point> bombPoints) {
+        synchronized(this) {
+            this.bombPoints.clear();
+            this.bombPoints.addAll(bombPoints);
+        }
     }
     
-    public synchronized void setBonusPoints(List<BonusPoint> bonusPoints) {
-        this.bonusPoints.clear();
-        this.bonusPoints.addAll(bonusPoints);
+    public void setBonusPoints(List<BonusPoint> bonusPoints) {
+        synchronized(this) {
+            this.bonusPoints.clear();
+            this.bonusPoints.addAll(bonusPoints);
+        }
     }
 
     public void setMap(File map) {

@@ -27,6 +27,8 @@ public class ParseUserPacket extends Thread {
     ThreadLocal<Integer> moveCounter;
     private final String username;
     
+    private final Object lockPacket = new Object();
+    
     public ParseUserPacket(InetAddress address, int port, GameServer gameServer, DatagramSocket socket, String username) {
         this.address = address;
         this.port = port;
@@ -54,16 +56,20 @@ public class ParseUserPacket extends Thread {
         }
     }
     
-    private synchronized void managePackets() {
-        packets.forEach((packet)->parsePacket(packet));
-        packets.clear();
+    private void managePackets() {
+        synchronized(lockPacket) {
+            packets.forEach((packet)->parsePacket(packet));
+            packets.clear();
+        }
     }
     
-    public synchronized void addPacket(DatagramPacket packet) {
-        packets.add(packet);
+    public void addPacket(DatagramPacket packet) {
+        synchronized(lockPacket) {
+            packets.add(packet);
+        }
     }
     
-    private synchronized void parsePacket(DatagramPacket dpacket) {
+    private void parsePacket(DatagramPacket dpacket) {
         byte[] data = dpacket.getData();
         String message = new String(data).trim();
         Packet.PacketTypes type = Packet.lookupPacket(message.substring(0, 2));
@@ -224,7 +230,6 @@ public class ParseUserPacket extends Thread {
 
     private void manageMoveCounter() {
         if(System.currentTimeMillis() - time > 1000){
-            System.out.println("moveCounter: "+moveCounter.get()+", clearing...   "+username);
             moveCounter.set(0);
             time = System.currentTimeMillis();
         }
