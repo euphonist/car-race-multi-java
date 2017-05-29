@@ -152,6 +152,14 @@ public class GameServer extends Thread {
             packet = new Packet14StartRace(time);
             packet.writeData(this);
             break;
+        case DISCONNECT:
+            packet = new Packet01Disconnect(data);
+            System.out.println("[" + address.getHostAddress() + ":" + port + "] "
+                    + ((Packet01Disconnect) packet).getUsername() + " has left...");
+            int index = getPlayerMPIndex(((Packet01Disconnect)packet).getUsername());
+            userThreads.get(index).close();
+            removeConnection((Packet01Disconnect) packet);
+            break;
         default:
             boolean isUserThread = false;
             for (ParseUserPacket userThread : userThreads) {
@@ -168,14 +176,6 @@ public class GameServer extends Thread {
                 sendData(alreadyConnectedPacket.getData(), dpacket.getAddress(),
                         dpacket.getPort());
             }
-            break;
-        case DISCONNECT:
-            packet = new Packet01Disconnect(data);
-            System.out.println("[" + address.getHostAddress() + ":" + port + "] "
-                    + ((Packet01Disconnect) packet).getUsername() + " has left...");
-            int index = getPlayerMPIndex(((Packet01Disconnect)packet).getUsername());
-            userThreads.get(index).close();
-            removeConnection((Packet01Disconnect) packet);
             break;
         }
     }

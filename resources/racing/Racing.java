@@ -72,6 +72,7 @@ public class Racing extends JPanel implements ActionListener {
     private long bestLap = 0;
     private boolean isRaceStarted;
     private boolean isRaceEnded;
+    private String lastBonus;
     
     public GameClient socketClient;
     public GameServer socketServer;
@@ -116,6 +117,7 @@ public class Racing extends JPanel implements ActionListener {
 
         actualCheckpoint = 0;
         numberOfBonusPoints = 0;
+        lastBonus="";
 
         oilPoints = new ArrayList<>();
         bombPoints = new ArrayList<>();
@@ -236,7 +238,7 @@ public class Racing extends JPanel implements ActionListener {
         Graphics2D g2d = (Graphics2D) g;
         g2d.drawImage(background, 0, 0, this);
         g2d.setColor(Color.white);
-        g2d.fillRect(3, 5, 70, 35);
+        g2d.fillRect(3, 9, 65, 30);
         g2d.setFont(new Font("TimesRoman", Font.BOLD, 16));
         g2d.setColor(Color.BLACK);
         if(this.isRaceStarted) {
@@ -253,6 +255,7 @@ public class Racing extends JPanel implements ActionListener {
             }
             g2d.drawString("Best lap: "+bestLap/1000.0, 8, 90);
             paintBonusPoints(g);
+            g2d.drawString("Last bonus: "+lastBonus, 80, 30);
         }
         for(Point oilPoint : oilPoints) {
             if(!oilPoint.equals(new Point())) {
@@ -321,7 +324,7 @@ public class Racing extends JPanel implements ActionListener {
         if (bonus == null) {
             return;
         }
-        System.out.println(bonus);
+        lastBonus = bonus.name().toLowerCase();
         switch (bonus) {
             case NONE:
                 break;
