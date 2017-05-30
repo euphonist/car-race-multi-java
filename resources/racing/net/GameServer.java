@@ -318,9 +318,11 @@ public class GameServer extends Thread {
         synchronized(this) {
             int x = packet.getPoint().x;
             int y = packet.getPoint().y;
-            for(Point oilPoint : oilPoints) {
+            Iterator<Point> iter = oilPoints.iterator();
+            while(iter.hasNext()) {
+                Point oilPoint = iter.next();
                 if(oilPoint.x == x && oilPoint.y == y) {
-                    oilPoints.remove(oilPoint);
+                    iter.remove();
                     return;
                 }
             }
@@ -331,9 +333,11 @@ public class GameServer extends Thread {
         synchronized (this) {
             int x = packet.getPoint().x;
             int y = packet.getPoint().y;
-            for(Point bombPoint : bombPoints) {
+            Iterator<Point> iter = oilPoints.iterator();
+            while(iter.hasNext()) {
+                Point bombPoint = iter.next();
                 if(bombPoint.x == x && bombPoint.y == y) {
-                    bombPoints.remove(bombPoint);
+                    iter.remove();
                     return;
                 }
             }
